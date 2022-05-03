@@ -88,7 +88,7 @@ class _LineGraphState extends State<LineGraph> {
         isShowGraphLine: widget.isShowGraphLine,
         labelX: widget.labelX ?? [],
         labelY: widget.labelY ?? [],
-        labelYGab: widget.labelYGap,
+        labelYGap: widget.labelYGap,
         fontFamily: widget.fontFamily ?? '',
         graphColor: widget.graphColor,
         graphOpacity: widget.graphOpacity,
