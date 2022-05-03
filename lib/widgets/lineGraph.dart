@@ -1,57 +1,59 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:draw_graph/models/feature.dart';
 
 class LineGraphPainter extends CustomPainter {
-  final List<Feature>? features;
-  final List<String>? labelX;
-  final List<String>? labelY;
-  final String? fontFamily;
+  final List<String> labelX;
+  final List<String> labelY;
+  final List<int> list;
+  final String fontFamily;
   final Color graphColor;
   final double graphOpacity;
-
+  final int labelYGap;
+  bool isShowGraphLine = false;
   LineGraphPainter({
-    required this.features,
+    required this.isShowGraphLine,
     required this.labelX,
     required this.labelY,
+    required this.list,
     required this.fontFamily,
     required this.graphColor,
+    required this.labelYGap,
     required this.graphOpacity,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     double _offsetX = 1;
-    for (int i = 0; i < labelY!.length; i++) {
-      if (labelY![i].length > _offsetX) {
-        _offsetX = labelY![i].length.toDouble();
+    for (int i = 0; i < labelY.length; i++) {
+      if (labelY[i].length > _offsetX) {
+        _offsetX = labelY[i].length.toDouble();
       }
     }
 
     _offsetX *= 7;
     _offsetX += 2 * size.width / 20;
-    Size margin = Size(_offsetX, size.height / 8);
+    Size margin = Size(_offsetX, size.height / 20);
     Size graph = Size(
-      size.width - 2 * margin.width,
-      size.height - 2 * margin.height,
+      size.width,
+      size.height,
     );
     Size cell = Size(
-      graph.width / (labelX!.length - 1),
-      graph.height / labelY!.length,
+      (graph.width - margin.width) / (list.length),
+      graph.height / labelY.length,
     );
-
-    drawAxis(canvas, graph, margin);
-    drawLabelsY(canvas, size, margin, graph, cell);
-    drawLabelsX(canvas, margin, graph, cell);
-
-    for (int i = 0; i < features!.length; i++) {
+    // drawAxis(canvas, graph, margin);
+    if (isShowGraphLine) {
       drawGraph(
-        features![i],
         canvas,
         graph,
         cell,
         margin,
       );
     }
+    drawLabelsY(canvas, size, margin, graph, cell);
+
+    drawLabelsX(canvas, Size(_offsetX, margin.height / 20), graph, cell);
   }
 
   @override
@@ -83,99 +85,105 @@ class LineGraphPainter extends CustomPainter {
 
   void drawLabelsY(
       Canvas canvas, Size size, Size margin, Size graph, Size cell) {
-    for (int i = 0; i < labelY!.length; i++) {
-      TextSpan span = new TextSpan(
-        style: new TextStyle(
+    for (int i = 0; i < labelY.length; i++) {
+      TextSpan span = TextSpan(
+        style: TextStyle(
           color: graphColor,
           fontFamily: fontFamily,
         ),
-        text: labelY![i],
+        text: labelY[i],
       );
-      TextPainter tp = new TextPainter(
+      TextPainter tp = TextPainter(
         text: span,
         textAlign: TextAlign.left,
         textDirection: TextDirection.ltr,
       );
       tp.layout();
+      double textSize = tp.height;
       tp.paint(
         canvas,
-        new Offset(
-          size.width / 20,
-          margin.height + graph.height - 8 - (i + 1) * cell.height,
+        Offset(
+          20,
+          graph.height - (i) * cell.height - textSize,
         ),
       );
     }
   }
 
   void drawLabelsX(Canvas canvas, Size margin, Size graph, Size cell) {
-    for (int i = 0; i < labelX!.length; i++) {
-      TextSpan span = new TextSpan(
-        style: new TextStyle(
+    for (int i = 0; i < labelX.length; i++) {
+      TextSpan span = TextSpan(
+        style: TextStyle(
           color: graphColor,
+          fontSize: list.length > 12 ? 7 : 10,
           fontFamily: fontFamily,
         ),
-        text: labelX![i],
+        text: labelX[i],
       );
-      TextPainter tp = new TextPainter(
+      TextPainter tp = TextPainter(
           text: span,
           textAlign: TextAlign.left,
           textDirection: TextDirection.ltr);
       tp.layout();
       tp.paint(
         canvas,
-        new Offset(
-          margin.width + cell.width * i - 16,
-          margin.height + graph.height + 10,
+        Offset(
+          margin.width + cell.width * i,
+          margin.height + graph.height + 5,
         ),
       );
     }
   }
 
-  void drawGraph(
-      Feature feature, Canvas canvas, Size graph, Size cell, Size margin) {
+  void drawGraph(Canvas canvas, Size graph, Size cell, Size margin) {
     Paint fillPaint = Paint()
-      ..color = feature.color.withOpacity(graphOpacity)
+      ..color = Colors.green.withOpacity(graphOpacity)
       ..style = PaintingStyle.fill;
     Paint strokePaint = Paint()
-      ..color = feature.color
+      ..color = Colors.green
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 
     Path path = Path();
     Path linePath = Path();
-    path.moveTo(margin.width, graph.height + margin.height);
+    int marginBottom = 5;
+    path.moveTo(margin.width, graph.height - marginBottom);
     path.lineTo(
       margin.width,
-      margin.height + graph.height - feature.data[0] * graph.height,
+      graph.height - marginBottom,
     );
+    double value = cell.height / labelYGap;
     linePath.moveTo(
-      margin.width,
-      margin.height + graph.height - feature.data[0] * graph.height,
+      margin.width + 0 * cell.width,
+      graph.height -
+          ((list[0] * value) +
+              marginBottom), //here 10 value line start bottom show if add 10 start line point circle start
     );
-    int i = 0;
-    for (i = 1; i < labelX!.length && i < feature.data.length; i++) {
-      if (feature.data[i] > 1) {
-        feature.data[i] = 1;
+
+    const pointMode = PointMode.points;
+
+    for (int i = 0; i < list.length; i++) {
+      // this condition for when user draph value  0 that time not draw line and dot shape.
+      if (list[i] > 0) {
+        final points = [
+          Offset(margin.width + i * cell.width,
+              graph.height - ((list[i] * value) + marginBottom))
+        ];
+
+        final paint = Paint()
+          ..color = Colors.green
+          ..strokeWidth = 6
+          ..strokeCap = StrokeCap.round;
+        canvas.drawPoints(pointMode, points, paint);
+        // if (i != 0) {
+        linePath.lineTo(
+          margin.width + i * cell.width,
+          graph.height - ((list[i] * value) + marginBottom),
+        );
+        //}
       }
-      if (feature.data[i] < 0) {
-        feature.data[i] = 0;
-      }
-      path.lineTo(
-        margin.width + i * cell.width,
-        margin.height + graph.height - feature.data[i] * graph.height,
-      );
-      linePath.lineTo(
-        margin.width + i * cell.width,
-        margin.height + graph.height - feature.data[i] * graph.height,
-      );
+      canvas.drawPath(path, fillPaint);
+      canvas.drawPath(linePath, strokePaint);
     }
-    // path.lineTo(
-    //     margin.width + (feature.data.length - 1) * cell.width, margin.height);
-    path.lineTo(
-      margin.width + cell.width * (i - 1),
-      margin.height + graph.height,
-    );
-    canvas.drawPath(path, fillPaint);
-    canvas.drawPath(linePath, strokePaint);
   }
 }
